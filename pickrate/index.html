@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <title>Pickrate Tracker — v6 (fixes, bags)</title>
+    <style>
+      :root {
+        --panel: #161922;
+        --panel-2: #1c2030;
+        --text: #f3f5f9;
+        --muted: #a9b0c3;
+        --accent: #4da3ff;
+        --ok: #21c17a;
+        --bad: #ff5c5c;
+        --warn: #ffb020;
+        --gap: 8px;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html,
+      body {
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, Segoe UI, Roboto, Inter, Arial;
+        background: linear-gradient(180deg, #0d1016, #0b0d12);
+        color: var(--text);
+        font-size: 18px;
+      }
+      header {
+        padding: 12px 14px;
+        border-bottom: 1px solid #111;
+      }
+      .page {
+        width: 100%;
+        max-width: 960px;
+        margin: 0 auto;
+      }
+      .container {
+        padding: 2px;
+        display: grid;
+        gap: var(--gap);
+      }
+      .card {
+        background: linear-gradient(180deg, var(--panel), var(--panel-2));
+        border: 1px solid #222;
+        border-radius: 14px;
+      }
+      .card .hd {
+        padding: 10px;
+        border-bottom: 1px solid #222;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .card .bd {
+        padding: 10px;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-weight: 800;
+        background: var(--accent);
+        color: #07080a;
+        cursor: pointer;
+      }
+      button.accent {
+        background: var(--accent);
+        color: #07080a;
+      }
+      button.ghost {
+        background: transparent;
+        border: 1px solid #2a3046;
+        color: var(--text);
+      }
+      button.secondary {
+        background: #23283b;
+        color: var(--text);
+      }
+      button.success {
+        background: var(--ok);
+        color: #0b0d12;
+      }
+      button.warn {
+        background: var(--warn);
+        color: #0b0d12;
+      }
+      button.danger {
+        background: var(--bad);
+        color: #0b0d12;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .table-scroll {
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+      }
+      .table-scroll::-webkit-scrollbar {
+        height: 8px;
+      }
+      .table-scroll::-webkit-scrollbar-thumb {
+        background: #2a2f45;
+        border-radius: 8px;
+      }
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 2px;
+        table-layout: auto;
+        min-width: 0;
+      }
+      thead th,
+      tbody td {
+        padding: 3px 0px;
+        font-size: 16px;
+        text-align: center;
+      }
+      tbody tr {
+        background: #121622;
+        border: 1px solid #2a2f45;
+      }
+      tbody tr:nth-child(even) {
+        background: #0f1324;
+      }
+      tbody td:first-child {
+        font-weight: 700;
+      }
+      .badge {
+        background: #0b1020;
+        border: 1px solid #2a3046;
+        padding: 6px 8px;
+        border-radius: 999px;
+      }
+      .note {
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 6px;
+      }
+      .note code {
+        word-break: break-all;
+      }
+      .tile {
+        padding: 10px;
+        background: #111523;
+        border-radius: 10px;
+        border: 1px solid #23283b;
+        width: 100%;
+      }
+      .tile .cap {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .metric {
+        font-weight: 900;
+      }
+      .sub {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .tiles-wide {
+        display: flex;
+        flex-direction: column;
+        gap: var(--gap);
+        align-items: center;
+        margin-top: 10px;
+      }
+      .tiles-wide .tile {
+        max-width: 900px;
+        width: 100%;
+      }
+      .tile--emph .cap {
+        font-size: 13px;
+        letter-spacing: 0.2px;
+      }
+      .tile--emph .sub {
+        font-size: 14px;
+      }
+      .tile .metric.big {
+        font-size: 42px;
+        line-height: 1.05;
+        font-weight: 900;
+      }
+      #tileFinish.late .metric {
+        color: var(--bad);
+      }
+      @media (max-width: 600px) {
+        .container {
+          padding: 2px;
+        }
+        .card .bd {
+          padding: 8px;
+        }
+        .tile .metric.big {
+          font-size: 28px;
+        }
+      }
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1000;
+      }
+      .modal {
+        background: #0f1322;
+        padding: 14px;
+        border-radius: 12px;
+        max-width: 560px;
+        width: 100%;
+      }
+      .input input {
+        width: 100%;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid #2a3046;
+        background: #0c1020;
+        color: #f3f5f9;
+      }
+      #pickModal [data-loc] {
+        transition: transform 0.08s ease, box-shadow 0.08s ease,
+          background 0.08s ease, color 0.08s ease, border-color 0.08s ease;
+      }
+      #pickModal [data-loc].active {
+        background: var(--accent);
+        color: #0b0d12;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(77, 163, 255, 0.25),
+          0 6px 18px rgba(77, 163, 255, 0.25);
+        transform: translateY(-1px);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 style="margin: 0; font-size: 18px">Pickrate Tracker</h1>
+    </header>
+    <div class="page">
+      <div class="container">
+        <section class="card">
+          <div class="hd">
+            <h2 style="margin: 0; font-size: 16px">Controls</h2>
+            <div class="note" id="syncNote">Sync: —</div>
+          </div>
+          <div class="bd">
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                align-items: center;
+                margin-bottom: 8px;
+              "
+            >
+              <span>Current user: <b id="currentUser">—</b></span>
+              <button id="addUserBtn" class="accent">Add User</button>
+              <button id="chooseUserBtn" class="accent">Choose User</button>
+            </div>
+            <div class="controls">
+              <button id="startPickBtn" class="success" disabled>
+                Start Pick
+              </button>
+              <button id="endPickBtn" class="danger" disabled>End Pick</button>
+              <button id="checkDateBtn" class="secondary">Check a Date</button>
+              <button id="resetUserBtn" class="warn">Reset user data</button>
+            </div>
+            <div class="tiles-wide" id="liveTiles" style="display: none">
+              <div class="tile" id="tileRun">
+                <div class="cap">Running Pick</div>
+                <div id="elapsedBig" class="metric big">—</div>
+                <div class="sub" id="runLine">—</div>
+                <button
+                  id="editOngoingBtn"
+                  class="secondary"
+                  type="button"
+                  style="margin-top: 8px"
+                >
+                  Edit running pick
+                </button>
+              </div>
+              <div class="tile" id="tileFinish">
+                <div class="cap">Finish-by</div>
+                <div id="finishBy" class="metric">—</div>
+              </div>
+              <div class="tile tile--emph" id="tileThis">
+                <div class="cap">This pick (live)</div>
+                <div class="sub" id="pickLive1">Expected picked now: —</div>
+                <div class="sub" id="pickLive2">
+                  Remaining to target rate: —
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="hd">
+            <h2 style="margin: 0; font-size: 16px">Today's summary</h2>
+            <div>
+              <span class="badge">Date: <b id="todayDate"></b></span>
+            </div>
+          </div>
+          <div class="bd">
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Zone</th>
+                    <th>Items</th>
+                    <th>Time</th>
+                    <th>Rate</th>
+                    <th>Items/bag</th>
+                    <th>%</th>
+                    <th>Target</th>
+                  </tr>
+                </thead>
+                <tbody id="todayBody"></tbody>
+              </table>
+            </div>
+
+            <div
+              style="
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                margin-top: 14px;
+              "
+            >
+              <h3
+                style="
+                  margin: 0;
+                  font-size: 14px;
+                  letter-spacing: 0.02em;
+                  text-transform: uppercase;
+                "
+              >
+                Picks list
+              </h3>
+              <div
+                style="
+                  display: flex;
+                  flex-wrap: wrap;
+                  align-items: center;
+                  gap: 8px;
+                "
+              >
+                <label
+                  for="picksDateInput"
+                  class="sub"
+                  style="font-size: 13px; margin-right: 4px"
+                  >Date</label
+                >
+                <input
+                  id="picksDateInput"
+                  type="date"
+                  style="
+                    max-width: 150px;
+                    min-height: 36px;
+                    padding: 6px 8px;
+                    border-radius: 8px;
+                    border: 1px solid #2a3046;
+                    background: #0c1020;
+                    color: #f3f5f9;
+                    font-size: 14px;
+                  "
+                />
+                <button id="picksDateTodayBtn" class="secondary" type="button">
+                  Today
+                </button>
+              </div>
+            </div>
+
+            <div class="table-scroll" style="margin-top: 8px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Zone</th>
+                    <th>Items</th>
+                    <th>Bags</th>
+                    <th>Time</th>
+                    <th>Rate</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="picksBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="hd">
+            <h2 style="margin: 0; font-size: 16px">Last 28 days</h2>
+            <div class="badge" style="font-size: 12px">
+              Window: <b id="wRange"></b>
+            </div>
+          </div>
+          <div class="bd table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Zone</th>
+                  <th>Items</th>
+                  <th>Time</th>
+                  <th>Rate</th>
+                  <th>Items/bag</th>
+                  <th>%</th>
+                  <th>Target</th>
+                </tr>
+              </thead>
+              <tbody id="lastBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="addUserModal">
+      <div class="modal">
+        <h3>Add user</h3>
+        <div class="input" style="margin-top: 8px">
+          <input id="addUserInput" placeholder="username (3-32 chars)" />
+        </div>
+        <div
+          style="
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 12px;
+          "
+        >
+          <button id="cancelAddUser" class="ghost" type="button">Cancel</button>
+          <button id="saveAddUser" class="accent" type="button">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="chooseUserModal">
+      <div class="modal">
+        <h3>Choose user</h3>
+        <div class="input" style="margin-top: 8px">
+          <input
+            id="chooseUserInput"
+            list="userList"
+            placeholder="start typing..."
+          />
+          <datalist id="userList"></datalist>
+        </div>
+        <div
+          style="
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 12px;
+          "
+        >
+          <button id="cancelChooseUser" class="ghost" type="button">
+            Cancel
+          </button>
+          <button id="saveChooseUser" class="accent" type="button">Use</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="pickModal">
+      <div class="modal">
+        <h3>Start pick</h3>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+          "
+        >
+          <button class="secondary" data-loc="Ambient" type="button">
+            Ambient
+          </button>
+          <button class="secondary" data-loc="Frozen" type="button">
+            Frozen
+          </button>
+          <button class="secondary" data-loc="Chilled" type="button">
+            Chilled
+          </button>
+          <button class="secondary" data-loc="Bigs" type="button">Bigs</button>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px">
+          <div class="input" style="flex: 1 1 120px">
+            <input
+              id="bagsInput"
+              type="number"
+              min="0"
+              step="1"
+              inputmode="numeric"
+              placeholder="bags"
+            />
+          </div>
+          <div class="input" style="flex: 1 1 160px">
+            <input
+              id="itemsInput"
+              type="number"
+              min="1"
+              step="1"
+              inputmode="numeric"
+              placeholder="items count"
+            />
+          </div>
+        </div>
+        <div
+          style="
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 12px;
+          "
+        >
+          <button id="cancelPick" class="ghost" type="button">Cancel</button>
+          <button id="confirmPick" class="success" type="button" disabled>
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="dateModal">
+      <div class="modal">
+        <h3>Check date</h3>
+        <div class="input" style="margin-top: 8px">
+          <input id="dateInput" type="date" />
+        </div>
+        <div id="dateTableWrap" style="margin-top: 12px"></div>
+        <div
+          style="
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 12px;
+          "
+        >
+          <button id="closeDate" class="ghost" type="button">Close</button>
+          <button id="showDate" class="secondary" type="button">Show</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="editPickModal">
+      <div class="modal">
+        <h3>Edit pick</h3>
+        <div
+          id="editPickMeta"
+          class="sub"
+          style="margin-top: 4px; margin-bottom: 4px"
+        ></div>
+        <div class="input" style="margin-top: 8px">
+          <label
+            for="editStartTime"
+            class="sub"
+            style="display: block; margin-bottom: 4px"
+            >Start time</label
+          >
+          <input id="editStartTime" type="time" />
+        </div>
+        <div class="input" style="margin-top: 8px">
+          <label
+            for="editEndTime"
+            class="sub"
+            style="display: block; margin-bottom: 4px"
+            >End time</label
+          >
+          <input id="editEndTime" type="time" />
+        </div>
+        <div
+          style="
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 12px;
+          "
+        >
+          <button id="cancelEditPick" class="ghost" type="button">
+            Cancel
+          </button>
+          <button id="saveEditPick" class="accent" type="button">Save</button>
+        </div>
+      </div>
+
+      <div class="modal-backdrop" id="editOngoingModal">
+        <div class="modal">
+          <h3>Edit running pick</h3>
+          <div
+            id="editOngoingMeta"
+            class="sub"
+            style="margin-top: 4px; margin-bottom: 4px"
+          ></div>
+          <div class="input" style="margin-top: 8px">
+            <label
+              for="editOngoingStartTime"
+              class="sub"
+              style="display: block; margin-bottom: 4px"
+              >Start time</label
+            >
+            <input id="editOngoingStartTime" type="time" />
+          </div>
+          <div class="input" style="margin-top: 8px">
+            <label
+              for="editOngoingItems"
+              class="sub"
+              style="display: block; margin-bottom: 4px"
+              >Items</label
+            >
+            <input
+              id="editOngoingItems"
+              type="number"
+              min="1"
+              step="1"
+              inputmode="numeric"
+            />
+          </div>
+          <div class="input" style="margin-top: 8px">
+            <label
+              for="editOngoingBags"
+              class="sub"
+              style="display: block; margin-bottom: 4px"
+              >Bags</label
+            >
+            <input
+              id="editOngoingBags"
+              type="number"
+              min="0"
+              step="1"
+              inputmode="numeric"
+            />
+          </div>
+          <div
+            style="
+              display: flex;
+              justify-content: flex-end;
+              gap: 8px;
+              margin-top: 12px;
+            "
+          >
+            <button id="cancelEditOngoing" class="ghost" type="button">
+              Cancel
+            </button>
+            <button id="saveEditOngoing" class="accent" type="button">
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_URL = "/pickrate/api.php";
+      const USER_KEY = "pickrate.user.v1";
+      const LOCATIONS = ["Ambient", "Frozen", "Chilled", "Bigs"];
+      const DEFAULT_TARGETS = {
+        Ambient: 165,
+        Frozen: 120,
+        Chilled: 185,
+        Bigs: 105,
+        Overall: 160,
+      };
+
+      const $ = (s) => document.querySelector(s);
+      const $$ = (s) => Array.from(document.querySelectorAll(s));
+
+      const usernameValid = (u) => /^[a-zA-Z0-9_-]{3,32}$/.test(u);
+      const fmtHHMMfromHours = (h) => {
+        const total = Math.max(0, Math.round((isFinite(h) ? h : 0) * 60));
+        const hh = Math.floor(total / 60);
+        const mm = total % 60;
+        return String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
+      };
+      const fmtInt = (x) =>
+        isFinite(x) && x > 0 ? String(Math.round(x)) : "0";
+
+      function localDayId(d = new Date()) {
+        return d.toLocaleDateString("en-CA");
+      }
+      function addDays(d, n) {
+        const nd = new Date(d);
+        nd.setDate(nd.getDate() + n);
+        return nd;
+      }
+
+      const api = {
+        get: (u) =>
+          fetch(`${API_URL}?action=get&user=${encodeURIComponent(u)}`, {
+            cache: "no-store",
+          }).then((r) => r.json()),
+        listUsers: () =>
+          fetch(`${API_URL}?action=list_users`, { cache: "no-store" }).then(
+            (r) => r.json()
+          ),
+        addUser: (u) =>
+          fetch(`${API_URL}?action=add_user`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user: u }),
+          }).then((r) => r.json()),
+        reset: (u) =>
+          fetch(`${API_URL}?action=reset&user=${encodeURIComponent(u)}`).then(
+            (r) => r.json()
+          ),
+        startPick: (u, loc, items, day, bags) =>
+          fetch(`${API_URL}?action=start_pick&user=${encodeURIComponent(u)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ location: loc, items, day, bags }),
+          }).then((r) => r.json()),
+        endPick: (u, day) =>
+          fetch(`${API_URL}?action=end_pick&user=${encodeURIComponent(u)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ day }),
+          }).then((r) => r.json()),
+        editPick: (u, day, index, start, end) =>
+          fetch(`${API_URL}?action=edit_pick&user=${encodeURIComponent(u)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ day, index, start, end }),
+          }).then((r) => r.json()),
+        editOngoing: (u, start, items, bags) =>
+          fetch(
+            `${API_URL}?action=edit_ongoing&user=${encodeURIComponent(u)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ start, items, bags }),
+            }
+          ).then((r) => r.json()),
+      };
+
+      let currentUser = null;
+      let state = null;
+      let lastTS = 0;
+      let pollTimer = null;
+      let elapsedTimer = null;
+      let isFetching = false;
+      let isMutating = false;
+      let picksDateId = null;
+      let editingPick = null;
+
+      $("#addUserBtn").onclick = () => {
+        $("#addUserInput").value = "";
+        show("#addUserModal", true);
+      };
+      $("#cancelAddUser").onclick = () => show("#addUserModal", false);
+      $("#saveAddUser").onclick = async () => {
+        const v = $("#addUserInput").value.trim();
+        if (!usernameValid(v))
+          return alert("Invalid username (3-32 alnum/_/-)");
+        const res = await api.addUser(v).catch(() => null);
+        if (res && (res.status === "ok" || res.status === "exists")) {
+          localStorage.setItem(USER_KEY, v);
+          await startForUser(v);
+          show("#addUserModal", false);
+        } else alert("Add user failed");
+      };
+
+      $("#chooseUserBtn").onclick = async () => {
+        await refreshUserList();
+        $("#chooseUserInput").value = "";
+        show("#chooseUserModal", true);
+      };
+      $("#cancelChooseUser").onclick = () => {
+        show("#chooseUserModal", false);
+        if (!currentUser) show("#chooseUserModal", true);
+      };
+      $("#saveChooseUser").onclick = async () => {
+        const v = $("#chooseUserInput").value.trim();
+        if (!usernameValid(v)) return alert("Invalid username");
+        localStorage.setItem(USER_KEY, v);
+        await startForUser(v);
+        show("#chooseUserModal", false);
+      };
+
+      async function refreshUserList() {
+        try {
+          const d = await api.listUsers();
+          const dl = $("#userList");
+          dl.innerHTML = "";
+          (d.users || []).forEach((u) => {
+            const o = document.createElement("option");
+            o.value = u;
+            dl.appendChild(o);
+          });
+        } catch {}
+      }
+      function show(sel, flag) {
+        const el = $(sel);
+        if (el) el.style.display = flag ? "flex" : "none";
+      }
+
+      let chosenLoc = null;
+      const itemsInput = $("#itemsInput");
+      const bagsInput = $("#bagsInput");
+      const confirmBtn = $("#confirmPick");
+
+      function updateConfirmBtn() {
+        const items = parseInt(itemsInput.value || "0", 10);
+        const bags = parseInt(bagsInput.value || "0", 10);
+        let ok = false;
+        if (!chosenLoc || !(items > 0)) {
+          ok = false;
+        } else if (chosenLoc === "Bigs") {
+          ok = items > 0;
+        } else {
+          ok = items > 0 && bags > 0;
+        }
+        confirmBtn.disabled = !ok;
+        confirmBtn.textContent = ok ? `OK (${chosenLoc})` : "OK";
+      }
+
+      function updateBagsField() {
+        if (!bagsInput) return;
+        if (chosenLoc === "Bigs") {
+          bagsInput.value = "";
+          bagsInput.disabled = true;
+          bagsInput.setAttribute("aria-disabled", "true");
+        } else {
+          bagsInput.disabled = false;
+          bagsInput.removeAttribute("aria-disabled");
+        }
+      }
+
+      $$("#pickModal [data-loc]").forEach((btn) => {
+        btn.onclick = () => {
+          chosenLoc = btn.getAttribute("data-loc");
+          $$("#pickModal [data-loc]").forEach((x) =>
+            x.classList.remove("active")
+          );
+          btn.classList.add("active");
+          updateBagsField();
+          updateConfirmBtn();
+        };
+      });
+      itemsInput.addEventListener("input", updateConfirmBtn);
+      bagsInput.addEventListener("input", updateConfirmBtn);
+
+      $("#startPickBtn").onclick = () => {
+        chosenLoc = null;
+        itemsInput.value = "";
+        bagsInput.value = "";
+        bagsInput.disabled = false;
+        bagsInput.removeAttribute("aria-disabled");
+        $$("#pickModal [data-loc]").forEach((x) =>
+          x.classList.remove("active")
+        );
+        updateConfirmBtn();
+        show("#pickModal", true);
+      };
+      $("#cancelPick").onclick = () => show("#pickModal", false);
+      $("#confirmPick").onclick = async () => {
+        const items = parseInt(itemsInput.value || "0", 10);
+        if (!chosenLoc || !(items > 0)) return;
+        const day = localDayId();
+        let bags = null;
+        if (chosenLoc !== "Bigs") {
+          const b = parseInt(bagsInput.value || "0", 10);
+          if (b > 0) bags = b;
+        }
+        await mutate(() =>
+          api.startPick(currentUser, chosenLoc, items, day, bags)
+        );
+        show("#pickModal", false);
+      };
+
+      $("#endPickBtn").onclick = async () => {
+        const day = localDayId();
+        await mutate(() => api.endPick(currentUser, day));
+      };
+      $("#resetUserBtn").onclick = async () => {
+        if (!currentUser) return alert("No user selected");
+        if (!confirm("Reset data for " + currentUser + "?")) return;
+        await mutate(() => api.reset(currentUser));
+      };
+
+      $("#checkDateBtn").onclick = () => {
+        $("#dateInput").value = localDayId();
+        $("#dateTableWrap").innerHTML = "";
+        show("#dateModal", true);
+      };
+      $("#closeDate").onclick = () => show("#dateModal", false);
+      $("#showDate").onclick = () => {
+        if (!state) return;
+        const d = $("#dateInput").value;
+        if (!d) return;
+        const day = state.days[d] || null;
+        const picks = day ? day.picks : [];
+        const agg = aggregate(picks, null);
+        $("#dateTableWrap").innerHTML = renderTableBody(agg);
+      };
+
+      $("#picksDateTodayBtn").onclick = () => {
+        picksDateId = currentDayId();
+        const input = $("#picksDateInput");
+        if (input) input.value = picksDateId;
+        renderPicksList(picksDateId);
+      };
+
+      const picksDateInput = $("#picksDateInput");
+      if (picksDateInput) {
+        picksDateInput.addEventListener("change", () => {
+          const v = picksDateInput.value;
+          picksDateId = v || currentDayId();
+          renderPicksList(picksDateId);
+        });
+      }
+
+      const editOngoingBtn = $("#editOngoingBtn");
+      if (editOngoingBtn) {
+        editOngoingBtn.onclick = () => {
+          if (!state || !state.ongoing) {
+            alert("No running pick");
+            return;
+          }
+          openEditOngoing();
+        };
+      }
+
+      $("#cancelEditOngoing").onclick = () => {
+        show("#editOngoingModal", false);
+      };
+      $("#saveEditOngoing").onclick = async () => {
+        if (!state || !state.ongoing) {
+          show("#editOngoingModal", false);
+          return;
+        }
+        const start = $("#editOngoingStartTime").value;
+        const itemsStr = $("#editOngoingItems").value;
+        const bagsEl = $("#editOngoingBags");
+        if (!validTime(start)) {
+          alert("Enter valid start time (HH:MM)");
+          return;
+        }
+        const items = parseInt(itemsStr || "0", 10);
+        if (!(items > 0)) {
+          alert("Enter valid items count");
+          return;
+        }
+        let bags = null;
+        if (state.ongoing.location !== "Bigs" && bagsEl && !bagsEl.disabled) {
+          const bVal = parseInt(bagsEl.value || "0", 10);
+          bags = bVal > 0 ? bVal : null;
+        }
+        await mutate(() => api.editOngoing(currentUser, start, items, bags));
+        show("#editOngoingModal", false);
+      };
+
+      $("#cancelEditPick").onclick = () => {
+        editingPick = null;
+        show("#editPickModal", false);
+      };
+      $("#saveEditPick").onclick = async () => {
+        if (!editingPick) return;
+        const start = $("#editStartTime").value;
+        const end = $("#editEndTime").value;
+        if (!validTime(start) || !validTime(end)) {
+          alert("Enter valid start and end time (HH:MM)");
+          return;
+        }
+        await mutate(() =>
+          api.editPick(
+            currentUser,
+            editingPick.dayId,
+            editingPick.index,
+            start,
+            end
+          )
+        );
+        editingPick = null;
+        show("#editPickModal", false);
+      };
+
+      async function mutate(fn) {
+        if (!currentUser) return alert("Choose user first");
+        if (isMutating) return;
+        try {
+          isMutating = true;
+          $("#syncNote").textContent = "Saving...";
+          const res = await fn();
+          if (!res || typeof res !== "object") throw new Error("Bad response");
+          state = res;
+          lastTS = state.lastUpdate || 0;
+          render();
+          $("#syncNote").textContent = "Sync: live";
+        } catch (e) {
+          console.error(e);
+          $("#syncNote").textContent = "Save error";
+          alert("Operation failed");
+        } finally {
+          isMutating = false;
+        }
+      }
+
+      async function fetchState() {
+        if (!currentUser || isFetching || isMutating) return;
+        try {
+          isFetching = true;
+          const got = await api.get(currentUser);
+          if (got && typeof got === "object") {
+            const ts = got.lastUpdate || 0;
+            if (ts !== lastTS) {
+              state = got;
+              lastTS = ts;
+              render();
+            }
+            $("#syncNote").textContent = "Sync: live";
+          }
+        } catch (e) {
+          console.warn("fetch failed", e);
+          $("#syncNote").textContent = "Sync: offline";
+        } finally {
+          isFetching = false;
+        }
+      }
+
+      function startPolling() {
+        stopPolling();
+        pollTimer = setInterval(fetchState, 60000);
+        fetchState();
+        elapsedTimer = setInterval(() => {
+          if (state && state.ongoing) tickElapsed();
+        }, 1000);
+      }
+      function stopPolling() {
+        if (pollTimer) clearInterval(pollTimer);
+        if (elapsedTimer) clearInterval(elapsedTimer);
+        pollTimer = null;
+        elapsedTimer = null;
+      }
+
+      function aggregate(picks, ongoing) {
+        const agg = {
+          Ambient: { items: 0, timeH: 0, bags: 0 },
+          Frozen: { items: 0, timeH: 0, bags: 0 },
+          Chilled: { items: 0, timeH: 0, bags: 0 },
+          Bigs: { items: 0, timeH: 0, bags: 0 },
+          __overall: { items: 0, timeH: 0, bags: 0 },
+        };
+        const overall = { items: 0, timeH: 0, bags: 0 };
+        for (const p of picks || []) {
+          const startMs = new Date(p.start).getTime();
+          const endMs = new Date(p.end).getTime();
+          let mins = 0;
+          if (isFinite(startMs) && isFinite(endMs) && endMs > startMs) {
+            const diffMs = endMs - startMs;
+            mins = Math.round(diffMs / 60000);
+            if (mins === 0 && diffMs > 0) mins = 1;
+          }
+          let h = mins / 60;
+          if (!isFinite(h) || h < 0) h = 0;
+          const loc = p.location;
+          const items = Number(p.items || 0);
+          let bags = 0;
+          if (loc !== "Bigs") {
+            const rawBags =
+              typeof p.bags === "number"
+                ? p.bags
+                : p.bags
+                ? parseInt(p.bags, 10)
+                : 0;
+            if (isFinite(rawBags) && rawBags > 0) bags = rawBags;
+          }
+          if (agg[loc]) {
+            agg[loc].items += items;
+            agg[loc].timeH += h;
+            agg[loc].bags += bags;
+          }
+          if (loc !== "Bigs" && bags > 0) {
+            overall.items += items;
+            overall.timeH += h;
+            overall.bags += bags;
+          }
+        }
+        if (ongoing) {
+          const startMs = new Date(ongoing.start).getTime();
+          const nowMs = Date.now();
+          let mins = 0;
+          if (isFinite(startMs) && nowMs > startMs) {
+            const diffMs = nowMs - startMs;
+            mins = Math.round(diffMs / 60000);
+            if (mins === 0 && diffMs > 0) mins = 1;
+          }
+          let hLive = mins / 60;
+          if (!isFinite(hLive) || hLive < 0) hLive = 0;
+          const loc = ongoing.location;
+          if (agg[loc]) {
+            agg[loc].timeH += hLive;
+          }
+          let bagsLive = 0;
+          if (loc !== "Bigs") {
+            const rawBags =
+              typeof ongoing.bags === "number"
+                ? ongoing.bags
+                : ongoing.bags
+                ? parseInt(ongoing.bags, 10)
+                : 0;
+            if (isFinite(rawBags) && rawBags > 0) bagsLive = rawBags;
+          }
+          if (loc !== "Bigs" && bagsLive > 0) {
+            overall.timeH += hLive;
+            overall.bags += bagsLive;
+          }
+        }
+        agg.__overall = overall;
+        return agg;
+      }
+
+      function getTargets() {
+        return {
+          Ambient:
+            state && state.targets && state.targets.Ambient
+              ? state.targets.Ambient
+              : DEFAULT_TARGETS.Ambient,
+          Frozen:
+            state && state.targets && state.targets.Frozen
+              ? state.targets.Frozen
+              : DEFAULT_TARGETS.Frozen,
+          Chilled:
+            state && state.targets && state.targets.Chilled
+              ? state.targets.Chilled
+              : DEFAULT_TARGETS.Chilled,
+          Bigs:
+            state && state.targets && state.targets.Bigs
+              ? state.targets.Bigs
+              : DEFAULT_TARGETS.Bigs,
+          Overall:
+            state && state.targets && state.targets.Overall
+              ? state.targets.Overall
+              : DEFAULT_TARGETS.Overall,
+        };
+      }
+
+      function currentDayId() {
+        return localDayId();
+      }
+
+      function renderTableBody(agg) {
+        let rows = "";
+        ["Ambient", "Frozen", "Chilled", "Bigs"].forEach((loc) => {
+          const a = agg[loc] || { items: 0, timeH: 0, bags: 0 };
+          const rate = a.timeH > 0 ? a.items / a.timeH : 0;
+          const t =
+            state && state.targets && state.targets[loc]
+              ? state.targets[loc]
+              : DEFAULT_TARGETS[loc];
+          const pct = t > 0 ? (rate / t) * 100 : 0;
+          const color = pct >= 100 ? "color:var(--ok)" : "color:var(--bad)";
+          const bags = a.bags || 0;
+          const avgItemsPerBag =
+            loc === "Bigs" || bags <= 0 ? "—" : fmtInt(a.items / bags);
+          rows +=
+            "<tr>" +
+            `<td>${loc}</td>` +
+            `<td>${a.items}</td>` +
+            `<td>${fmtHHMMfromHours(a.timeH)}</td>` +
+            `<td>${fmtInt(rate)}</td>` +
+            `<td>${avgItemsPerBag}</td>` +
+            `<td style="${color}">${Math.round(pct)}%</td>` +
+            `<td>${t}</td>` +
+            "</tr>";
+        });
+        const o = agg.__overall || { items: 0, timeH: 0, bags: 0 };
+        const rO = o.timeH > 0 ? o.items / o.timeH : 0;
+        const tO =
+          state && state.targets && state.targets.Overall
+            ? state.targets.Overall
+            : DEFAULT_TARGETS.Overall;
+        const pO = tO > 0 ? (rO / tO) * 100 : 0;
+        const cO = pO >= 100 ? "color:var(--ok)" : "color:var(--bad)";
+        const oBags = o.bags || 0;
+        const avgOverallItemsPerBag =
+          oBags <= 0 ? "—" : fmtInt(o.items / oBags);
+        rows +=
+          "<tr>" +
+          "<td><b>Overall</b></td>" +
+          `<td><b>${o.items}</b></td>` +
+          `<td><b>${fmtHHMMfromHours(o.timeH)}</b></td>` +
+          `<td><b>${fmtInt(rO)}</b></td>` +
+          `<td><b>${avgOverallItemsPerBag}</b></td>` +
+          `<td style="${cO}"><b>${Math.round(pO)}%</b></td>` +
+          `<td><b>${tO}</b></td>` +
+          "</tr>";
+        return `<div class="table-scroll"><table><thead><tr><th>Zone</th><th>Items</th><th>Time</th><th>Rate</th><th>Items/bag</th><th>%</th><th>Target</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      }
+
+      function updateTilesVisibility() {
+        const wrap = document.getElementById("liveTiles");
+        if (!wrap) return;
+        wrap.style.display = state && state.ongoing ? "flex" : "none";
+      }
+
+      function renderPicksList(dayId) {
+        const tbody = document.getElementById("picksBody");
+        if (!tbody) return;
+        const input = document.getElementById("picksDateInput");
+        if (input && dayId) input.value = dayId;
+        if (!state || !state.days || !dayId || !state.days[dayId]) {
+          tbody.innerHTML = "";
+          return;
+        }
+        const targets = getTargets();
+        const day = state.days[dayId];
+        const picks = Array.isArray(day.picks) ? day.picks : [];
+        let html = "";
+        picks.forEach((p, idx) => {
+          const startText = isoToHHMM(p.start);
+          const endText = isoToHHMM(p.end);
+          const startMs = new Date(p.start).getTime();
+          const endMs = new Date(p.end).getTime();
+          let mins = 0;
+          if (isFinite(startMs) && isFinite(endMs) && endMs > startMs) {
+            const diffMs = endMs - startMs;
+            mins = Math.round(diffMs / 60000);
+            if (mins === 0 && diffMs > 0) mins = 1;
+          }
+          const timeText = mins > 0 ? fmtHHMMfromHours(mins / 60) : "00:00";
+          const hours = mins > 0 ? mins / 60 : 0;
+          const items = Number(p.items || 0);
+          const rate = hours > 0 ? items / hours : 0;
+          let bags = 0;
+          if (p.location !== "Bigs") {
+            const rawBags =
+              typeof p.bags === "number"
+                ? p.bags
+                : p.bags
+                ? parseInt(p.bags, 10)
+                : 0;
+            if (isFinite(rawBags) && rawBags > 0) bags = rawBags;
+          }
+          const bagsText =
+            p.location === "Bigs" || bags <= 0 ? "—" : String(bags);
+          const avgItemsPerBag =
+            p.location === "Bigs" || bags <= 0 ? "—" : fmtInt(items / bags);
+          const tZone = targets[p.location] || 0;
+          const pct = tZone > 0 ? (rate / tZone) * 100 : 0;
+          let rateStyle = "";
+          if (tZone > 0) {
+            rateStyle = pct >= 100 ? "color:var(--ok)" : "color:var(--bad)";
+          }
+          const rateTd =
+            "<td" +
+            (rateStyle ? ' style="' + rateStyle + '"' : "") +
+            ">" +
+            fmtInt(rate) +
+            "</td>";
+          html +=
+            "<tr>" +
+            `<td>${startText}</td>` +
+            `<td>${endText}</td>` +
+            `<td>${p.location}</td>` +
+            `<td>${items}</td>` +
+            `<td>${bagsText}</td>` +
+            `<td>${timeText}</td>` +
+            rateTd +
+            `<td><button type="button" class="secondary pick-edit-btn" data-day="${dayId}" data-index="${idx}">Edit</button></td>` +
+            "</tr>";
+        });
+        tbody.innerHTML = html;
+      }
+
+      function render() {
+        if (!state) return;
+        document.getElementById("currentUser").textContent = currentUser;
+
+        const today = currentDayId();
+        document.getElementById("todayDate").textContent = today;
+        const d = state.days && state.days[today] ? state.days[today] : null;
+        const picks = d ? d.picks : [];
+        const agg = aggregate(picks, state.ongoing || null);
+
+        (function () {
+          let html = "";
+          ["Ambient", "Frozen", "Chilled", "Bigs"].forEach((loc) => {
+            const v = agg[loc] || { items: 0, timeH: 0, bags: 0 };
+            const rate = v.timeH > 0 ? v.items / v.timeH : 0;
+            const t =
+              state && state.targets && state.targets[loc]
+                ? state.targets[loc]
+                : DEFAULT_TARGETS[loc];
+            const pct = t > 0 ? (rate / t) * 100 : 0;
+            const color = pct >= 100 ? "color:var(--ok)" : "color:var(--bad)";
+            const bags = v.bags || 0;
+            const avgItemsPerBag =
+              loc === "Bigs" || bags <= 0 ? "—" : fmtInt(v.items / bags);
+            html +=
+              "<tr>" +
+              `<td>${loc}</td>` +
+              `<td>${v.items}</td>` +
+              `<td>${fmtHHMMfromHours(v.timeH)}</td>` +
+              `<td>${fmtInt(rate)}</td>` +
+              `<td>${avgItemsPerBag}</td>` +
+              `<td style="${color}">${Math.round(pct)}%</td>` +
+              `<td>${t}</td>` +
+              "</tr>";
+          });
+          const o = agg.__overall || { items: 0, timeH: 0, bags: 0 };
+          const rO = o.timeH > 0 ? o.items / o.timeH : 0;
+          const tO =
+            state && state.targets && state.targets.Overall
+              ? state.targets.Overall
+              : DEFAULT_TARGETS.Overall;
+          const pO = tO > 0 ? (rO / tO) * 100 : 0;
+          const cO = pO >= 100 ? "color:var(--ok)" : "color:var(--bad)";
+          const oBags = o.bags || 0;
+          const avgOverallItemsPerBag =
+            oBags <= 0 ? "—" : fmtInt(o.items / oBags);
+          html +=
+            "<tr>" +
+            "<td><b>Overall</b></td>" +
+            `<td><b>${o.items}</b></td>` +
+            `<td><b>${fmtHHMMfromHours(o.timeH)}</b></td>` +
+            `<td><b>${fmtInt(rO)}</b></td>` +
+            `<td><b>${avgOverallItemsPerBag}</b></td>` +
+            `<td style="${cO}"><b>${Math.round(pO)}%</b></td>` +
+            `<td><b>${tO}</b></td>` +
+            "</tr>";
+          document.getElementById("todayBody").innerHTML = html;
+        })();
+
+        const end = new Date();
+        const start = addDays(end, -27);
+        const rs = localDayId(start);
+        const re = localDayId(end);
+        document.getElementById("wRange").textContent = `${rs} → ${re}`;
+
+        const arr = [];
+        Object.entries(state.days || {}).forEach(([did, day]) => {
+          if (did >= rs && did <= re) {
+            (day.picks || []).forEach((p) => arr.push(p));
+          }
+        });
+        const agg28 = aggregate(arr, null);
+
+        (function () {
+          let html = "";
+          ["Ambient", "Frozen", "Chilled", "Bigs"].forEach((loc) => {
+            const a = agg28[loc] || { items: 0, timeH: 0, bags: 0 };
+            const rate = a.timeH > 0 ? a.items / a.timeH : 0;
+            const t =
+              state && state.targets && state.targets[loc]
+                ? state.targets[loc]
+                : DEFAULT_TARGETS[loc];
+            const pct = t > 0 ? (rate / t) * 100 : 0;
+            const color = pct >= 100 ? "color:var(--ok)" : "color:var(--bad)";
+            const bags = a.bags || 0;
+            const avgItemsPerBag =
+              loc === "Bigs" || bags <= 0 ? "—" : fmtInt(a.items / bags);
+            html +=
+              "<tr>" +
+              `<td>${loc}</td>` +
+              `<td>${a.items}</td>` +
+              `<td>${fmtHHMMfromHours(a.timeH)}</td>` +
+              `<td>${fmtInt(rate)}</td>` +
+              `<td>${avgItemsPerBag}</td>` +
+              `<td style="${color}">${Math.round(pct)}%</td>` +
+              `<td>${t}</td>` +
+              "</tr>";
+          });
+          const o28 = agg28.__overall || {
+            items: 0,
+            timeH: 0,
+            bags: 0,
+          };
+          const r28 = o28.timeH > 0 ? o28.items / o28.timeH : 0;
+          const t28 =
+            state && state.targets && state.targets.Overall
+              ? state.targets.Overall
+              : DEFAULT_TARGETS.Overall;
+          const p28 = t28 > 0 ? (r28 / t28) * 100 : 0;
+          const c28 = p28 >= 100 ? "color:var(--ok)" : "color:var(--bad)";
+          const o28Bags = o28.bags || 0;
+          const avg28ItemsPerBag =
+            o28Bags <= 0 ? "—" : fmtInt(o28.items / o28Bags);
+          html +=
+            "<tr>" +
+            "<td><b>Overall</b></td>" +
+            `<td><b>${o28.items}</b></td>` +
+            `<td><b>${fmtHHMMfromHours(o28.timeH)}</b></td>` +
+            `<td><b>${fmtInt(r28)}</b></td>` +
+            `<td><b>${avg28ItemsPerBag}</b></td>` +
+            `<td style="${c28}"><b>${Math.round(p28)}%</b></td>` +
+            `<td><b>${t28}</b></td>` +
+            "</tr>";
+          document.getElementById("lastBody").innerHTML = html;
+        })();
+
+        if (!picksDateId) {
+          picksDateId = today;
+        }
+        renderPicksList(picksDateId);
+
+        setButtons();
+        updateTilesVisibility();
+        tickElapsed();
+      }
+
+      function setButtons() {
+        const hasOngoing = !!(state && state.ongoing);
+        document.getElementById("startPickBtn").disabled = hasOngoing;
+        document.getElementById("endPickBtn").disabled = !hasOngoing;
+      }
+
+      function calcFinishBy() {
+        if (!state || !state.ongoing) return null;
+        const o = state.ongoing;
+        const targets = getTargets();
+        const day =
+          state.days && state.days[currentDayId()]
+            ? state.days[currentDayId()]
+            : { picks: [] };
+        const aggDone = aggregate(day.picks || [], null);
+        const zone = o.location;
+        const zItems =
+          aggDone[zone] && aggDone[zone].items ? aggDone[zone].items : 0;
+        const zTime =
+          aggDone[zone] && aggDone[zone].timeH ? aggDone[zone].timeH : 0;
+        const oItems = aggDone.__overall ? aggDone.__overall.items : 0;
+        const oTime = aggDone.__overall ? aggDone.__overall.timeH : 0;
+        const maxTZone = (zItems + o.items) / targets[zone] - zTime;
+        const maxTOverall = (oItems + o.items) / targets.Overall - oTime;
+        let maxT = Infinity;
+        if (isFinite(maxTZone)) maxT = Math.min(maxT, maxTZone);
+        if (isFinite(maxTOverall)) maxT = Math.min(maxT, maxTOverall);
+        const elapsedH = (Date.now() - new Date(o.start).getTime()) / 3600000;
+        if (!isFinite(maxT)) return { status: "free", leftH: Infinity };
+        const leftH = maxT - elapsedH;
+        const deadline = new Date(
+          new Date(o.start).getTime() + Math.max(0, maxT) * 3600000
+        );
+        return { status: leftH >= 0 ? "ok" : "late", leftH, deadline };
+      }
+
+      function tickElapsed() {
+        updateTilesVisibility();
+        if (!state || !state.ongoing) {
+          document.getElementById("elapsedBig").textContent = "—";
+          document.getElementById("runLine").textContent = "—";
+          document.getElementById("finishBy").textContent = "—";
+          document.getElementById("tileFinish").classList.remove("late");
+          document.getElementById("pickLive1").textContent =
+            "Expected picked now: —";
+          document.getElementById("pickLive2").textContent =
+            "Remaining to target rate: —";
+          return;
+        }
+        const o = state.ongoing;
+        document.getElementById(
+          "runLine"
+        ).innerHTML = `${o.location} • LIVE • items: ${o.items}`;
+        const ms = Date.now() - new Date(o.start).getTime();
+        const total = Math.max(0, Math.round(ms / 60000));
+        const hh = Math.floor(total / 60);
+        const mm = total % 60;
+        document.getElementById("elapsedBig").textContent = `${String(
+          hh
+        ).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+
+        const targets = getTargets();
+        const elapsedH = ms / 3600000;
+        const expectedNow = Math.min(o.items, targets[o.location] * elapsedH);
+        document.getElementById(
+          "pickLive1"
+        ).textContent = `Expected picked now: ${fmtInt(expectedNow)}`;
+        const neededH = o.items / targets[o.location];
+        const remainH = Math.max(0, neededH - elapsedH);
+        document.getElementById(
+          "pickLive2"
+        ).textContent = `Remaining to target rate: ${fmtHHMMfromHours(
+          remainH
+        )}`;
+
+        const fb = calcFinishBy();
+        if (!fb) {
+          document.getElementById("finishBy").textContent = "—";
+          document.getElementById("tileFinish").classList.remove("late");
+        } else if (fb.status === "ok") {
+          const until = fb.deadline
+            ? fb.deadline.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "—";
+          document.getElementById(
+            "finishBy"
+          ).textContent = `Finish by ${until}`;
+          document.getElementById("tileFinish").classList.remove("late");
+        } else if (fb.status === "free") {
+          document.getElementById("finishBy").textContent = "—";
+          document.getElementById("tileFinish").classList.remove("late");
+        } else {
+          document.getElementById("finishBy").textContent = "LATE";
+          document.getElementById("tileFinish").classList.add("late");
+        }
+      }
+
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) fetchState();
+      });
+
+      function isoToHHMM(iso) {
+        if (!iso || typeof iso !== "string") return "";
+        if (iso.length >= 16) return iso.slice(11, 16);
+        return "";
+      }
+
+      function validTime(t) {
+        return typeof t === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(t);
+      }
+
+      document.addEventListener("click", (e) => {
+        const btn = e.target.closest(".pick-edit-btn");
+        if (!btn) return;
+        const dayId = btn.getAttribute("data-day");
+        const indexStr = btn.getAttribute("data-index");
+        const index = parseInt(indexStr || "0", 10);
+        openEditPick(dayId, index);
+      });
+
+      function openEditPick(dayId, index) {
+        if (!state || !state.days || !state.days[dayId]) return;
+        const day = state.days[dayId];
+        if (!Array.isArray(day.picks) || !day.picks[index]) return;
+        const pick = day.picks[index];
+        editingPick = { dayId, index };
+        const meta = document.getElementById("editPickMeta");
+        if (meta) {
+          meta.textContent = `${dayId} • ${pick.location} • items: ${pick.items}`;
+        }
+        const startInput = document.getElementById("editStartTime");
+        const endInput = document.getElementById("editEndTime");
+        if (startInput) startInput.value = isoToHHMM(pick.start);
+        if (endInput) endInput.value = isoToHHMM(pick.end);
+        show("#editPickModal", true);
+      }
+
+      function openEditOngoing() {
+        if (!state || !state.ongoing) return;
+        const o = state.ongoing;
+        const meta = document.getElementById("editOngoingMeta");
+        if (meta) {
+          meta.textContent = `${currentDayId()} • ${o.location} • items: ${
+            o.items
+          }`;
+        }
+        const startInput = document.getElementById("editOngoingStartTime");
+        const itemsInput2 = document.getElementById("editOngoingItems");
+        const bagsInput2 = document.getElementById("editOngoingBags");
+        if (startInput) startInput.value = isoToHHMM(o.start);
+        if (itemsInput2) itemsInput2.value = String(o.items || "");
+        if (bagsInput2) {
+          if (o.location === "Bigs") {
+            bagsInput2.value = "";
+            bagsInput2.disabled = true;
+            bagsInput2.setAttribute("aria-disabled", "true");
+          } else {
+            let raw = 0;
+            if (typeof o.bags === "number") {
+              raw = o.bags;
+            } else if (o.bags) {
+              const parsed = parseInt(o.bags, 10);
+              if (isFinite(parsed) && parsed > 0) raw = parsed;
+            }
+            bagsInput2.disabled = false;
+            bagsInput2.removeAttribute("aria-disabled");
+            bagsInput2.value = raw > 0 ? String(raw) : "";
+          }
+        }
+        show("#editOngoingModal", true);
+      }
+
+      async function startForUser(u) {
+        currentUser = u;
+        document.getElementById("currentUser").textContent = u;
+        lastTS = 0;
+        picksDateId = null;
+        await fetchState();
+        startPolling();
+      }
+
+      (async function init() {
+        const u = localStorage.getItem(USER_KEY);
+        if (u && usernameValid(u)) {
+          await startForUser(u);
+        } else {
+          await refreshUserList();
+          show("#chooseUserModal", true);
+        }
+      })();
+    </script>
+  </body>
+</html>
