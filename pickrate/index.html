@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta
@@ -1057,13 +1057,14 @@
 
       function aggregate(picks, ongoing) {
         const agg = {
-          Ambient: { items: 0, timeH: 0, bags: 0 },
-          Frozen: { items: 0, timeH: 0, bags: 0 },
-          Chilled: { items: 0, timeH: 0, bags: 0 },
-          Bigs: { items: 0, timeH: 0, bags: 0 },
-          __overall: { items: 0, timeH: 0, bags: 0 },
+          Ambient: { items: 0, timeH: 0, bags: 0, itemsForBags: 0 },
+          Frozen: { items: 0, timeH: 0, bags: 0, itemsForBags: 0 },
+          Chilled: { items: 0, timeH: 0, bags: 0, itemsForBags: 0 },
+          Bigs: { items: 0, timeH: 0, bags: 0, itemsForBags: 0 },
+          __overall: { items: 0, timeH: 0, bags: 0, itemsForBags: 0 },
         };
-        const overall = { items: 0, timeH: 0, bags: 0 };
+        const overallRate = { items: 0, timeH: 0 };
+        const overallBags = { itemsForBags: 0, bags: 0 };
         for (const p of picks || []) {
           const startMs = new Date(p.start).getTime();
           const endMs = new Date(p.end).getTime();
@@ -1090,12 +1091,16 @@
           if (agg[loc]) {
             agg[loc].items += items;
             agg[loc].timeH += h;
-            agg[loc].bags += bags;
+            if (loc !== "Bigs" && bags > 0) {
+              agg[loc].bags += bags;
+              agg[loc].itemsForBags += items;
+            }
           }
+          overallRate.items += items;
+          overallRate.timeH += h;
           if (loc !== "Bigs" && bags > 0) {
-            overall.items += items;
-            overall.timeH += h;
-            overall.bags += bags;
+            overallBags.itemsForBags += items;
+            overallBags.bags += bags;
           }
         }
         if (ongoing) {
@@ -1113,6 +1118,7 @@
           if (agg[loc]) {
             agg[loc].timeH += hLive;
           }
+          overallRate.timeH += hLive;
           let bagsLive = 0;
           if (loc !== "Bigs") {
             const rawBags =
@@ -1124,11 +1130,16 @@
             if (isFinite(rawBags) && rawBags > 0) bagsLive = rawBags;
           }
           if (loc !== "Bigs" && bagsLive > 0) {
-            overall.timeH += hLive;
-            overall.bags += bagsLive;
+            overallBags.itemsForBags += Number(ongoing.items || 0);
+            overallBags.bags += bagsLive;
           }
         }
-        agg.__overall = overall;
+        agg.__overall = {
+          items: overallRate.items,
+          timeH: overallRate.timeH,
+          bags: overallBags.bags,
+          itemsForBags: overallBags.itemsForBags,
+        };
         return agg;
       }
 
@@ -1173,8 +1184,10 @@
           const pct = t > 0 ? (rate / t) * 100 : 0;
           const color = pct >= 100 ? "color:var(--ok)" : "color:var(--bad)";
           const bags = a.bags || 0;
+          const baseForAvg =
+            typeof a.itemsForBags === "number" ? a.itemsForBags : a.items;
           const avgItemsPerBag =
-            loc === "Bigs" || bags <= 0 ? "—" : fmtInt(a.items / bags);
+            loc === "Bigs" || bags <= 0 ? "—" : fmtInt(baseForAvg / bags);
           rows +=
             "<tr>" +
             `<td>${loc}</td>` +
@@ -1329,8 +1342,10 @@
           const pO = tO > 0 ? (rO / tO) * 100 : 0;
           const cO = pO >= 100 ? "color:var(--ok)" : "color:var(--bad)";
           const oBags = o.bags || 0;
+          const baseOverallForAvg =
+            typeof o.itemsForBags === "number" ? o.itemsForBags : o.items;
           const avgOverallItemsPerBag =
-            oBags <= 0 ? "—" : fmtInt(o.items / oBags);
+            oBags <= 0 ? "—" : fmtInt(baseOverallForAvg / oBags);
           html +=
             "<tr>" +
             "<td><b>Overall</b></td>" +
@@ -1370,8 +1385,10 @@
             const pct = t > 0 ? (rate / t) * 100 : 0;
             const color = pct >= 100 ? "color:var(--ok)" : "color:var(--bad)";
             const bags = a.bags || 0;
+            const baseForAvg =
+              typeof a.itemsForBags === "number" ? a.itemsForBags : a.items;
             const avgItemsPerBag =
-              loc === "Bigs" || bags <= 0 ? "—" : fmtInt(a.items / bags);
+              loc === "Bigs" || bags <= 0 ? "—" : fmtInt(baseForAvg / bags);
             html +=
               "<tr>" +
               `<td>${loc}</td>` +
@@ -1396,8 +1413,10 @@
           const p28 = t28 > 0 ? (r28 / t28) * 100 : 0;
           const c28 = p28 >= 100 ? "color:var(--ok)" : "color:var(--bad)";
           const o28Bags = o28.bags || 0;
+          const base28ForAvg =
+            typeof o28.itemsForBags === "number" ? o28.itemsForBags : o28.items;
           const avg28ItemsPerBag =
-            o28Bags <= 0 ? "—" : fmtInt(o28.items / o28Bags);
+            o28Bags <= 0 ? "—" : fmtInt(base28ForAvg / o28Bags);
           html +=
             "<tr>" +
             "<td><b>Overall</b></td>" +
